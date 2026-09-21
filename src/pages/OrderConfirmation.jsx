@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import client from '../api/client';
+import { getOrderById } from '../lib/orders';
 
 export default function OrderConfirmation() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const [order, setOrder] = useState(null);
+  const [error, setError] = useState('');
   const paid = searchParams.get('paid');
 
   useEffect(() => {
-    client.get(`/orders/${id}`).then((res) => setOrder(res.data));
+    getOrderById(id)
+      .then(setOrder)
+      .catch((err) => setError(err.message));
   }, [id]);
 
+  if (error) return <div className="page error-text">Error: {error}</div>;
   if (!order) return <div className="page">Loading...</div>;
 
   return (
@@ -23,9 +27,16 @@ export default function OrderConfirmation() {
         <p className="order-number">Order #{order.order_number}</p>
 
         <div className="confirmation-details">
-          <p><strong>Delivery to:</strong> {order.delivery_address}, {order.delivery_area}</p>
-          <p><strong>Payment:</strong> {order.payment_method === 'paystack' ? 'Paid Online (Paystack)' : 'Pay on Delivery'}</p>
-          <p><strong>Total:</strong> ₦{Number(order.total).toLocaleString()}</p>
+          <p>
+            <strong>Delivery to:</strong> {order.delivery_address}, {order.delivery_area}
+          </p>
+          <p>
+            <strong>Payment:</strong>{' '}
+            {order.payment_method === 'paystack' ? 'Paid Online (Paystack)' : 'Pay on Delivery'}
+          </p>
+          <p>
+            <strong>Total:</strong> ₦{Number(order.total).toLocaleString()}
+          </p>
         </div>
 
         <Link to="/orders" className="btn-primary">View My Orders</Link>

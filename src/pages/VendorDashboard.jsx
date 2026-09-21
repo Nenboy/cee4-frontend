@@ -67,13 +67,21 @@ export default function VendorDashboard() {
             <tbody>
               {products.map((p) => (
                 <tr key={p.id}>
-                  <td>
-                    <img src={p.image_url} alt={p.name} style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
+                  <td data-label="Image">
+                    {p.image_url ? (
+                      <img
+                        src={p.image_url}
+                        alt={p.name}
+                        style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '12px', color: '#999' }}>No image</span>
+                    )}
                   </td>
-                  <td>{p.name}</td>
-                  <td>{p.category}</td>
-                  <td>₦{Number(p.price).toLocaleString()}</td>
-                  <td>
+                  <td data-label="Name">{p.name}</td>
+                  <td data-label="Category">{p.category}</td>
+                  <td data-label="Price">₦{Number(p.price).toLocaleString()}</td>
+                  <td data-label="Status">
                     <span style={{
                       padding: '4px 8px',
                       borderRadius: '4px',
@@ -84,8 +92,8 @@ export default function VendorDashboard() {
                       {p.status.toUpperCase()}
                     </span>
                   </td>
-                  <td>
-                    <Link to={`/edit-product/${p.id}`} style={{ marginRight: '8px' }}>Edit</Link>
+                  <td data-label="Actions">
+                    <Link to={`/edit-product/${p.id}`} style={{ marginRight: '12px' }}>Edit</Link>
                     <button onClick={() => handleDelete(p.id)} style={{ color: 'red' }}>Delete</button>
                   </td>
                 </tr>

@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, role, full_name, phone, address, area')
+      .select('id, email, role, full_name, phone, address, area, banned')
       .eq('id', authUser.id)
       .single()
 
@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
         id: authUser.id,
         email: authUser.email,
         role: 'user',
+        banned: false,
       }
     }
     return data
@@ -75,8 +76,6 @@ export function AuthProvider({ children }) {
       email,
       password,
       options: {
-        // These get stored in auth.users.raw_user_meta_data
-        // The DB trigger `handle_new_user` copies them into public.profiles
         data: {
           full_name: name,
           phone,
@@ -111,7 +110,6 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// ✅ This is the export your Login.jsx / Register.jsx / pages import
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')
