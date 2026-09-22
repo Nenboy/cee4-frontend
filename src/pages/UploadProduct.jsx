@@ -1,99 +1,145 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getMyProducts, deleteProduct } from '../lib/products';
+import { uploadProduct } from '../lib/products';
 
-export default function VendorDashboard() {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+export default function UploadProduct() {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [form, setForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
 
-  const loadProducts = async () => {
+  const handleFileChange = (e) => {
+    const selected = e.target.files[0];
+    setFile(selected);
+    if (selected) {
+      setPreview(URL.createObjectURL(selected));
+    }
+  };
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+    setIsError(false);
+
     try {
-      setLoading(true);
-      const data = await getMyProducts();
-      setProducts(data);
+      await uploadProduct(file, { ...form, price: Number(form.price) });
+      setMessage('Product submitted for review. You will be notified once it is approved.');
+      setForm({ name: '', description: '', price: '', category: '' });
+      setFile(null);
+      setPreview(null);
+      e.target.reset();
     } catch (err) {
-      setError(err.message);
+      setMessage(err.message || 'Upload failed.');
+      setIsError(true);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-    try {
-      await deleteProduct(id);
-      setProducts(products.filter((p) => p.id !== id));
-    } catch (err) {
-      alert('Error deleting product: ' + err.message);
-    }
-  };
-
-  if (loading) return <div className="page-loading">Loading your products...</div>;
+  }
 
   return (
-    <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <h1>My Products</h1>
-        <Link to="/upload" className="btn-primary" style={{ textDecoration: 'none' }}>
-          + Upload New Product
-        </Link>
-      </div>
-
-      {error && <p className="error-text">{error}</p>}
-
-      {products.length === 0 ? (
-        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-          <p>You have not uploaded any products yet.</p>
-          <Link to="/upload">Upload your first product</Link>
+    <div className="page auth-page">
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>Upload Product</h1>
+          <Link to="/my-products" style={{ fontSize: '14px' }}>Back to My Products</Link>
         </div>
-      ) : (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Image</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <img src={p.image_url} alt={p.name} style={{ width: '50px', height: '50px', objectFit: 'cover' }} />
-                  </td>
-                  <td>{p.name}</td>
-                  <td>{p.category}</td>
-                  <td>₦{Number(p.price).toLocaleString()}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      backgroundColor: p.status === 'approved' ? '#e6f4ea' : p.status === 'pending' ? '#fef7e0' : '#fce8e6',
-                      color: p.status === 'approved' ? '#137333' : p.status === 'pending' ? '#b06000' : '#c5221f'
-                    }}>
-                      {p.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td>
-                    <Link to={`/edit-product/${p.id}`} style={{ marginRight: '8px' }}>Edit</Link>
-                    <button onClick={() => handleDelete(p.id)} style={{ color: 'red' }}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+
+        <p className="muted" style={{ marginBottom: '1.5rem', fontSize: '14px' }}>
+          Fill in the details below. Your product will be reviewed by an admin before appearing in the shop.
+        </p>
+
+        <label>
+          Product Name
+          <input
+            placeholder="e.g. Ankara Two-Piece Set"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
+        </label>
+
+        <label>
+          Description
+          <textarea
+            placeholder="Describe the material, fit, size, and any other details..."
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            rows={4}
+          />
+        </label>
+
+        <label>
+          Price (₦)
+          <input
+            type="number"
+            placeholder="e.g. 15000"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            required
+            min="0"
+          />
+        </label>
+
+        <label>
+          Category
+          <select
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            required
+          >
+            <option value="">Select a category</option>
+            <option value="men">Men</option>
+            <option value="women">Women</option>
+            <option value="kids">Kids</option>
+            <option value="accessories">Accessories</option>
+          </select>
+        </label>
+
+        <label>
+          Product Image
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            required
+          />
+        </label>
+
+        {preview && (
+          <div style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+            <p style={{ fontSize: '13px', marginBottom: '0.5rem' }}>Preview:</p>
+            <img
+              src={preview}
+              alt="Product preview"
+              style={{
+                width: '100%',
+                maxHeight: '240px',
+                objectFit: 'cover',
+                borderRadius: '8px',
+                border: '1px solid #ddd',
+              }}
+            />
+          </div>
+        )}
+
+        {message && (
+          <p className={isError ? 'error-text' : ''} style={!isError ? { color: 'green', fontSize: '14px' } : {}}>
+            {message}
+          </p>
+        )}
+
+        <button type="submit" className="btn-primary full-width" disabled={loading}>
+          {loading ? 'Uploading...' : 'Submit Product for Review'}
+        </button>
+      </form>
     </div>
   );
 }
