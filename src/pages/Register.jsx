@@ -29,7 +29,8 @@ export default function Register() {
       await register(form);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed.');
+      // FIXED: Supabase throws standard JS errors, not Axios errors
+      setError(err.message || 'Registration failed.');
     } finally {
       setSubmitting(false);
     }

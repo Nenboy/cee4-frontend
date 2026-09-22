@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import client from '../api/client';
+import { createOrder } from '../lib/orders';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { deliveryAreas, DELIVERY_FEE } from '../api/mockData';
@@ -11,7 +11,7 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    recipient_name: user?.name || '',
+    recipient_name: user?.full_name || '',
     recipient_phone: user?.phone || '',
     delivery_address: user?.address || '',
     delivery_area: deliveryAreas[0],
@@ -33,35 +33,46 @@ export default function Checkout() {
     setSubmitting(true);
 
     try {
-      const orderRes = await client.post('/orders', {
-        items: items.map((i) => ({
-          product_id: i.product_id,
-          size: i.size,
-          color: i.color,
-          quantity: i.quantity,
-        })),
-        ...form,
+      const orderItems = items.map((i) => ({
+        product_id: i.product_id || i.id,
+        name: i.name,
+        price: Number(i.price),
+        quantity: Number(i.quantity),
+        image_url: i.image_url || null,
+      }));
+
+      const order = await createOrder({
+        total,
+        payment_method: form.payment_method,
+        payment_status: 'unpaid',
+        delivery_area: form.delivery_area,
+        delivery_address: form.delivery_address,
+        recipient_name: form.recipient_name,
+        recipient_phone: form.recipient_phone,
+        notes: form.notes,
+        items: orderItems,
       });
-      const order = orderRes.data;
+
+      clearCart();
 
       if (form.payment_method === 'paystack') {
-        const payRes = await client.post(`/orders/${order.id}/pay`);
-        clearCart();
-        // Redirect to Paystack's (or the mock) checkout page
-        window.location.href = payRes.data.authorization_url;
+        navigate(`/payment/mock-checkout?order=${order.id}`);
       } else {
-        clearCart();
         navigate(`/order-confirmation/${order.id}`);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   if (items.length === 0) {
-    return <div className="page">Your cart is empty. <a href="/shop">Go shopping</a>.</div>;
+    return (
+      <div className="page">
+        Your cart is empty. <a href="/shop">Go shopping</a>.
+      </div>
+    );
   }
 
   return (
@@ -81,7 +92,13 @@ export default function Checkout() {
           </label>
           <label>
             Delivery Address
-            <input name="delivery_address" value={form.delivery_address} onChange={handleChange} required placeholder="Street, house number, landmark" />
+            <input
+              name="delivery_address"
+              value={form.delivery_address}
+              onChange={handleChange}
+              required
+              placeholder="Street, house number, landmark"
+            />
           </label>
           <label>
             Area within Jos
@@ -130,14 +147,18 @@ export default function Checkout() {
           {error && <p className="error-text">{error}</p>}
 
           <button type="submit" className="btn-primary full-width" disabled={submitting}>
-            {submitting ? 'Placing Order...' : form.payment_method === 'paystack' ? 'Continue to Payment' : 'Place Order'}
+            {submitting
+              ? 'Placing Order...'
+              : form.payment_method === 'paystack'
+              ? 'Continue to Payment'
+              : 'Place Order'}
           </button>
         </form>
 
         <div className="order-summary">
           <h3>Order Summary</h3>
-          {items.map((item) => (
-            <div key={`${item.product_id}-${item.size}-${item.color}`} className="summary-line">
+          {items.map((item, idx) => (
+            <div key={idx} className="summary-line">
               <span>{item.name} × {item.quantity}</span>
               <span>₦{(item.price * item.quantity).toLocaleString()}</span>
             </div>

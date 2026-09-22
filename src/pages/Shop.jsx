@@ -1,27 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import client from '../api/client';
+import { getApprovedProducts } from '../lib/products';
 import ProductCard from '../components/ProductCard';
+
+const CATEGORIES = [
+  { slug: 'men', name: 'Men' },
+  { slug: 'women', name: 'Women' },
+  { slug: 'kids', name: 'Kids' },
+  { slug: 'accessories', name: 'Accessories' },
+];
 
 export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const category = searchParams.get('category') || '';
   const search = searchParams.get('search') || '';
   const sort = searchParams.get('sort') || 'newest';
 
   useEffect(() => {
-    client.get('/categories').then((res) => setCategories(res.data));
-  }, []);
-
-  useEffect(() => {
     setLoading(true);
-    client
-      .get('/products', { params: { category, search, sort } })
-      .then((res) => setProducts(res.data.data))
+    setError('');
+    getApprovedProducts({ category, search, sort })
+      .then(setProducts)
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [category, search, sort]);
 
@@ -42,7 +46,7 @@ export default function Shop() {
         >
           All
         </button>
-        {categories.map((cat) => (
+        {CATEGORIES.map((cat) => (
           <button
             key={cat.slug}
             className={category === cat.slug ? 'filter-active' : ''}
@@ -70,6 +74,8 @@ export default function Shop() {
 
         {loading ? (
           <p>Loading products...</p>
+        ) : error ? (
+          <p className="error-text">Error: {error}</p>
         ) : products.length === 0 ? (
           <p>No products found.</p>
         ) : (

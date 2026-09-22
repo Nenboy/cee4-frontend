@@ -26,11 +26,15 @@ export default function Navbar() {
 
         <div className="nav-actions">
           <Link to="/cart" className="cart-link">
-            🛒 Cart{itemCount > 0 && <span className="badge">{itemCount}</span>}
+            Cart{itemCount > 0 && <span className="badge">{itemCount}</span>}
           </Link>
 
           {user ? (
             <div className="user-menu">
+              {/* NEW VENDOR LINKS */}
+              <Link to="/my-products">My Products</Link>
+              <Link to="/upload">Upload Product</Link>
+              
               <Link to="/orders">My Orders</Link>
               {user.role === 'admin' && <Link to="/admin">Admin</Link>}
               <button onClick={handleLogout}>Logout</button>

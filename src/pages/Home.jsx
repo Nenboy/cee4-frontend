@@ -1,16 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import client from '../api/client';
+import { getApprovedProducts } from '../lib/products';
 import ProductCard from '../components/ProductCard';
+
+const CATEGORIES = [
+  { slug: 'men', name: 'Men' },
+  { slug: 'women', name: 'Women' },
+  { slug: 'kids', name: 'Kids' },
+  { slug: 'accessories', name: 'Accessories' },
+];
 
 export default function Home() {
   const [featured, setFeatured] = useState([]);
-  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
-    client.get('/products', { params: { featured: 1, per_page: 8 } })
-      .then((res) => setFeatured(res.data.data));
-    client.get('/categories').then((res) => setCategories(res.data));
+    getApprovedProducts({ sort: 'newest' })
+      .then((data) => setFeatured(data.slice(0, 8)))
+      .catch(console.error);
   }, []);
 
   return (
@@ -26,8 +32,8 @@ export default function Home() {
       <section className="section">
         <h2>Shop by Category</h2>
         <div className="category-grid">
-          {categories.map((cat) => (
-            <Link key={cat.id} to={`/shop?category=${cat.slug}`} className="category-tile">
+          {CATEGORIES.map((cat) => (
+            <Link key={cat.slug} to={`/shop?category=${cat.slug}`} className="category-tile">
               {cat.name}
             </Link>
           ))}
@@ -36,11 +42,15 @@ export default function Home() {
 
       <section className="section">
         <h2>Featured Products</h2>
-        <div className="product-grid">
-          {featured.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+        {featured.length === 0 ? (
+          <p>No products available yet.</p>
+        ) : (
+          <div className="product-grid">
+            {featured.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

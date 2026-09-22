@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import client from '../api/client';
+import { updateOrderPaymentStatus } from '../lib/orders';
 
 const TEST_CARD = '4084 0840 8408 4081';
 
 export default function MockPaystackCheckout() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const reference = searchParams.get('reference');
   const orderId = searchParams.get('order');
 
   const [card, setCard] = useState('');
@@ -25,19 +24,28 @@ export default function MockPaystackCheckout() {
       return;
     }
 
+    if (!orderId) {
+      setError('Missing order reference. Please go back to checkout.');
+      return;
+    }
+
     setProcessing(true);
-    // Simulate gateway processing delay, then verify via our mock client
-    setTimeout(async () => {
-      await client.get(`/payments/verify/${reference}`);
-      setProcessing(false);
+    try {
+      // Simulate gateway delay
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await updateOrderPaymentStatus(orderId, 'paid');
       navigate(`/order-confirmation/${orderId}?paid=1`);
-    }, 1200);
+    } catch (err) {
+      setError(err.message || 'Payment verification failed.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
     <div className="page mock-paystack">
       <div className="paystack-card">
-        <p className="paystack-badge">🔒 Paystack Test Mode (Sandbox)</p>
+        <p className="paystack-badge">Paystack Test Mode (Sandbox)</p>
         <h2>Pay with Card</h2>
         <p className="test-card-hint">
           Use the official Paystack test card — no real money is charged:
